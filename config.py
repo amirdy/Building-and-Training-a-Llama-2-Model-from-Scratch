@@ -1,19 +1,9 @@
-LLAMA2_CONFIG_7B = {
-    "vocab_size": 32000,     # Vocabulary size
-    "context_length": 4096,  # Context length
-    "emb_dim": 4096,         # Embedding dimension
-    "n_heads": 32,           # Number of attention heads
-    "n_layers": 32,          # Number of layers
-    "hidden_dim": 11008,     # NEW: Size of the intermediate dimension in FeedForward
-    "num_groups":8,
-    "dtype": torch.bfloat16  # NEW: Lower-precision dtype to reduce memory usage
-}
 from dataclasses import dataclass
 
 @dataclass
 class LlamaConfig_7B:
     """
-    Configuration for GPT model architecture.
+    Configuration for Llama2_7B model architecture.
 
     Attributes:
         vocab_size: Vocabulary size used in the model.
@@ -21,9 +11,9 @@ class LlamaConfig_7B:
         emb_dim: The embedding dimension size.
         n_heads: The number of attention heads in the multi-head attention layer.
         n_layers: The number of transformer layers.
-        drop_rate: Dropout rate to prevent overfitting.
         qkv_bias: Whether to use bias in the QKV matrices.
-        weight_tying: Whether to tie weights between input and output embedding layers.
+        num_groups: Number of groups for the GQA (Group Query Attention) mechanism.
+        intermediate_size: Size of the hidden layer in the feedforward network.
     """
     vocab_size = 32000     ### See the Llama 2 paper
     context_length = 4096  ### See the Llama 2 paper
@@ -31,8 +21,8 @@ class LlamaConfig_7B:
     n_heads = 32           ### See the Llama 1 paper
     n_layers = 32//2       ### See the Llama 1 paper
     qkv_bias = False
-    num_groups = 32         ### In order to be like Multi-head Attention
-    intermediate_size = 11008   ### Hidden
+    num_groups = 32         ### 32 = In order to be like Multi-head Attention
+    intermediate_size = 11008   ### Size of the hidden in FeedForward
 
 
 @dataclass
@@ -47,10 +37,10 @@ class TrainingConfig:
         min_lr: Minimum learning rate during training.
         weight_decay: Weight decay coefficient for optimizer.
         batch_size: Batch size for each training step.
+        grad_accum_steps: Number of gradient accumulation steps.
         max_new_token: The number of new tokens to generate at each step.
         temperature: Sampling temperature for text generation.
-        k_top: Top-k sampling to filter the most probable next tokens.
-        grad_accum_steps: Number of gradient accumulation steps.
+        top_p: Probability threshold for nucleus sampling.
     """
     max_steps = 500  # 2T tokens | batch_size = 4M | so the number of steps should be: 2T/4M = 500,000 steps in Llama2
     warmup_steps = 2 # 2000 in Llama2

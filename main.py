@@ -28,7 +28,7 @@ def load_tiny_stories():
 
 
 def main():
-    """ Main function to set up and train the Llama model. """
+    """ Main function to set up and train the Llama2-7B model. """
     
     # Load dataset
     tokens_train, tokens_val = load_tiny_stories()
@@ -43,7 +43,7 @@ def main():
 
 
     # Initialize Data Module and Data Loaders
-    dm = DataModule(training_config.batch_size, LlamaConfig_7B.context_length, tokens_train, tokens_val)
+    dm = DataModule(training_config.batch_size, Llama_config.context_length, tokens_train, tokens_val)
     train_dataloader = dm.train_dataloader()
     val_dataloader = dm.val_dataloader()
 
@@ -51,7 +51,7 @@ def main():
     torch.set_float32_matmul_precision('high') 
 
     # Create the Llama model
-    model = Llama(LlamaConfig_7B)
+    model = Llama(Llama_config)
     model.to(device) # Move the model to the device
 
     # Compile the model for faster training

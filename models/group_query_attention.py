@@ -1,8 +1,4 @@
-#####
-
-
-#group_query_attention.py
-
+import torch
 import torch.nn as nn
 from torch.nn import functional as F
 
@@ -89,8 +85,8 @@ class GQA(nn.Module):
 
 
       ###       Rotary       ### no change in the shape
-      K = self.rotate(K, sin, cos)
-      Q = self.rotate(Q, sin, cos)
+      K = self.rotate(K, self.sin, self.cos)
+      Q = self.rotate(Q, self.sin, self.cos)
 
       #########################
       K = K.repeat_interleave(self.group_size, dim=1) # (batch_size, num_groups * group_size, seq_length, head_dim) #  num_groups x group_size = num_heads

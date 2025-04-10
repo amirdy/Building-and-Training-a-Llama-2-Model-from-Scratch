@@ -6,7 +6,7 @@ import math
 from pathlib import Path
 
 class Trainer:
-    """ Trainer class for training and evaluating a GPT model. """
+    """ Trainer class for training and evaluating a Llama2 model. """
     def __init__(self, tokenizer, train_dataloader, val_dataloader, model, config,  device, sample_context):
         self.tokenizer = tokenizer
         self.train_dataloader = train_dataloader

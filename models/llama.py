@@ -4,10 +4,10 @@ from models.layer_norm import RMSNorm
 from models.transformer_block import TransformerBlock
 
 class Llama(nn.Module):
-  """ A GPT-style transformer model. """
+  """ A decoder-only transformer model. """
 
   def __init__(self, config):
-    """Initializes the GPT model.
+    """ Initializes the Llama model.
 
     Args:
         config: A configuration object containing model hyperparameters.
@@ -35,7 +35,7 @@ class Llama(nn.Module):
   #   elif isinstance(module, nn.Embedding):
   #           torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
   def forward(self, input):
-    """Forward pass of the GPT model.
+    """Forward pass of the Llama model.
 
     Args:
         input_tensor (torch.Tensor): Tensor of shape (batch_size, context_length)

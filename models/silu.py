@@ -1,5 +1,3 @@
-#silu.py
-
 import torch
 import torch.nn as nn
 
@@ -12,6 +10,3 @@ class SiLU(nn.Module):
 
   def forward(self, input):
     return input * torch.sigmoid(input)
-silu = SiLU()
-x = torch.rand(10,12,1024)
-normal(x).shape

@@ -1,7 +1,5 @@
-#feed_forward.py   intermediate_size:11008
-
 import torch.nn as nn
-# from models.silu import SiLU
+from models.silu import SiLU
 
 class FeedForward(nn.Module):
   def __init__(self, embed_dim, intermediate_size):

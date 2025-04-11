@@ -34,7 +34,7 @@ def save_tokens(output_file, split):
 
   print(f"Collected {token_count} tokens for the {split} set and saved to {output_file}")
 
-save_tokens("train_tokens.txt", 'train')
-save_tokens("val_tokens.txt", 'validation')
-print("Vocabulary size:", tokenizer.vocab_size)
+save_tokens("train_tokens.txt", 'train') # Collected 488359704 tokens for the train set and saved to train_tokens.txt
+save_tokens("val_tokens.txt", 'validation') # Collected 4691861 tokens for the validation set and saved to val_tokens.txt
+print("Vocabulary size:", tokenizer.vocab_size)  # Vocabulary size: 32000
 

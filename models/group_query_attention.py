@@ -54,7 +54,7 @@ class GQA(nn.Module):
     x_rotated = torch.stack([-x2, x1], dim=-1)
     x_rotated = x_rotated.flatten(-2)
     print(x.shape, cos.shape, sin.shape, x_rotated.shape)
-    return x * (self.cos) + x_rotated * (self.sin)
+    return x * (self.cos.to(x.device)) + x_rotated * (self.sin.to(x.device))
 
   def forward(self, input):
       """Computes multi-head attention.
@@ -85,8 +85,8 @@ class GQA(nn.Module):
 
 
       ###       Rotary       ### no change in the shape
-      K = self.rotate(K, self.sin, self.cos)
-      Q = self.rotate(Q, self.sin, self.cos)
+      K = self._rotate(K, self.sin, self.cos)
+      Q = self._rotate(Q, self.sin, self.cos)
 
       #########################
       K = K.repeat_interleave(self.group_size, dim=1) # (batch_size, num_groups * group_size, seq_length, head_dim) #  num_groups x group_size = num_heads

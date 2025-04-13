@@ -16,6 +16,8 @@ class Trainer:
         self.model = model
         self.config = config
         self.device = device
+        self.device_type = 'cuda' if 'cuda' in str(self.device) else 'cpu'
+
         self.ddp_world_size = ddp_world_size
         self.master_process = master_process
         self.ddp = ddp
@@ -51,7 +53,9 @@ class Trainer:
     def _train_step(self, current_step):
         """ Perform a single training step. """
         self.model.train()
-        loss_accum = 0
+        # loss_accum = 0
+        loss_accum = torch.zeros(1, device=self.device)
+
         # Zero the gradients
         self.optimizer.zero_grad()
 
@@ -60,20 +64,21 @@ class Trainer:
             X, y = X.to(self.device), y.to(self.device)
 
             # Forward pass
-            with torch.autocast(device_type=str(self.device), dtype=torch.bfloat16): # Use bfloat16 for faster computation
+            with torch.autocast(device_type= self.device_type, dtype=torch.bfloat16): # Use bfloat16 for faster computation
                 pred = self.model(X)     # (batch_size, seq_length, vocab_size)
             pred = pred.flatten(0,1)     # (batch_size x seq_length, vocab_size)
             y = y.flatten(0,1)           # (batch_size x seq_length)
 
             # Calculate loss
             loss = self.criterion(pred, y) / self.grad_accum_steps
-            loss_accum += loss.item()
+            loss_accum += loss.detach()
             if self.ddp:
                 self.model.require_backward_grad_sync = (i == self.grad_accum_steps) # Synchronize gradients across all processes
             loss.backward()
         
         if self.ddp:
-            torch.distributed.all_reduce(loss_accum, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
+            loss_accum_ = torch.tensor(loss_accum, dtype=torch.float32, device=self.device) # Create a tensor to hold the loss for all processes
+            torch.distributed.all_reduce(loss_accum_, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
         
         
         # Clip norm of gradients
@@ -99,7 +104,7 @@ class Trainer:
 
             # Forward pass
             with torch.no_grad(): # No need to track the gradients
-                with torch.autocast(device_type=str(self.device), dtype=torch.bfloat16): # Use bfloat16 for faster computation
+                with torch.autocast(device_type= self.device_type, dtype=torch.bfloat16): # Use bfloat16 for faster computation
                     pred = self.model(X) # (batch_size, seq_length, vocab_size)
             pred = pred.flatten(0,1)     # (batch_size x seq_length, vocab_size)
             y = y.flatten(0,1)           # (batch_size x seq_length)

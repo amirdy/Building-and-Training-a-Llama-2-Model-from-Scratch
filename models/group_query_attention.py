@@ -16,7 +16,7 @@ class GQA(nn.Module):
       """
       super().__init__()
       self.num_groups = num_groups
-      self.group_size = embed_dim // num_groups
+      self.group_size = num_heads // num_groups
       self.head_dim = embed_dim // num_heads
       assert embed_dim % num_heads == 0, "embed_dim must be divisible by num_heads"
 
@@ -48,13 +48,13 @@ class GQA(nn.Module):
     sin = torch.sin(angles)  # Shape : (context_length, d)
     return cos, sin
 
-  def _rotate(self, x, cos, sin):
+  def _rotate(self, x, cos, sin, seq_length):
     x1 = x[..., ::2]  # even index
     x2 = x[..., 1::2]  # odd index
     x_rotated = torch.stack([-x2, x1], dim=-1)
     x_rotated = x_rotated.flatten(-2)
-    print(x.shape, cos.shape, sin.shape, x_rotated.shape)
-    return x * (self.cos.to(x.device)) + x_rotated * (self.sin.to(x.device))
+    # print("Aa",x.shape, cos.shape, sin.shape, x_rotated.shape)
+    return x * (self.cos[:seq_length,:].to(x.device)) + x_rotated * (self.sin[:seq_length,:].to(x.device))
 
   def forward(self, input):
       """Computes multi-head attention.
@@ -70,27 +70,29 @@ class GQA(nn.Module):
 
       Q = self.W_query(input)  # (batch_size, seq_length, embed_dim)
       K = self.W_key(input)    # (batch_size, seq_length, num_groups * head_dim)
-      # K = K.repeat_interleave(self.group_size, dim=-1) # (batch_size, seq_length, num_groups x group_size) # num_groups x group_size = embed_dim
       V = self.W_value(input)  # (batch_size, seq_length, num_groups * head_dim)
-      # V = V.repeat_interleave(self.group_size, dim=-1) # (batch_size, seq_length, num_groups x group_size) # num_groups x group_size = embed_dim
-
+      # print("0",self.num_groups, self.head_dim, self.group_size)# 4, 1024, 1024
+      # print("!",Q.shape, K.shape, V.shape) #torch.Size([8, 4096, 4096]) torch.Size([8, 4096, 8192]) torch.Size([8, 4096, 8192])
       Q = Q.view(batch_size, seq_length, self.num_heads, self.head_dim)  # (batch_size, seq_length, num_heads, head_dim)
       K = K.view(batch_size, seq_length, self.num_groups, self.head_dim)  # (batch_size, seq_length, num_groups, head_dim)
       V = V.view(batch_size, seq_length, self.num_groups, self.head_dim)  # (batch_size, seq_length, num_groups, head_dim)
+      # print("!!",Q.shape, K.shape, V.shape) #torch.Size([8, 4096, 2, 2048]) torch.Size([8, 4096, 4, 2048]) torch.Size([8, 4096, 4, 2048])
 
       Q = Q.permute(0, 2, 1, 3)  # (batch_size, num_heads, seq_length, head_dim)
       K = K.permute(0, 2, 1, 3)  # (batch_size, num_groups, seq_length, head_dim)
       V = V.permute(0, 2, 1, 3)  # (batch_size, num_groups, seq_length, head_dim)
-
+      # print("!!!",Q.shape, K.shape, V.shape) # torch.Size([8, 4, 4096, 1024]) torch.Size([8, 4, 4096, 1024]) torch.Size([8, 4, 4096, 1024])
 
 
       ###       Rotary       ### no change in the shape
-      K = self._rotate(K, self.sin, self.cos)
-      Q = self._rotate(Q, self.sin, self.cos)
-
+      K = self._rotate(K, self.sin, self.cos, seq_length)
+      Q = self._rotate(Q, self.sin, self.cos, seq_length)
+      # print("!!!!",Q.shape, K.shape, V.shape)# torch.Size([8, 4, 4096, 1024]) torch.Size([8, 4, 4096, 1024]) torch.Size([8, 4, 4096, 1024])
+      
       #########################
       K = K.repeat_interleave(self.group_size, dim=1) # (batch_size, num_groups * group_size, seq_length, head_dim) #  num_groups x group_size = num_heads
       V = V.repeat_interleave(self.group_size, dim=1)  # (batch_size, num_groups * group_size, seq_length, head_dim) #  num_groups x group_size = num_heads
+      # print("!!!!!",Q.shape, K.shape, V.shape)#(16, 4096, 4, 1024) (16, 4096, 4, 1024) (16, 4096, 4, 1024)
 
 
 

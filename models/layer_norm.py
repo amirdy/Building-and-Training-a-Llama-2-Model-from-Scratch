@@ -16,7 +16,4 @@ class RMSNorm(nn.Module):
     normalized = input / RMS
     return self.scale * normalized
 
-
-normal = RMSNorm(1024)
-x = torch.rand(10,12,1024)
-normal(x).shape
+ 

@@ -1,6 +1,6 @@
-# Building and Training a Llama 2 Model from Scratch
+# Building and Training a Llama-2 Model from Scratch
 
-This project contains all the necessary code and instructions to build, train, and use a Llama-2 model from scratch. While it's based on the Llama-2 7B architecture, it has been optimized for better computational efficiency by replacing traditional multi-head attention with grouped-query attention, a technique adopted in more recent Llama versions.
+This project contains all the necessary code and instructions to build, train, and use a Llama-2 model from scratch. While thie repository is based on the Llama-2 7B architecture, it has been optimized for better computational efficiency by replacing traditional multi-head attention with grouped-query attention, a technique adopted in more recent Llama versions.
 
 ## Setup
 
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 To train the model from scratch, use the provided `main.py` script. This script sets up the data, model, and training loop:
 
 ```bash
-!torchrun --standalone --nproc-per-node=2 main.py
+torchrun --standalone --nproc-per-node=2 main.py
 ```
 
 ### Explanation of the Command
@@ -44,7 +44,7 @@ To train the model from scratch, use the provided `main.py` script. This script 
 If you have 4 GPUs on your machine, you can modify the command as follows:
 
 ```bash
-!torchrun --standalone  --nproc-per-node=4 main.py
+torchrun --standalone  --nproc-per-node=4 main.py
 ```
 
 ### Note
@@ -87,6 +87,11 @@ class TrainingConfig:
     temperature = 1  
     top_p = 0.9   
 ```
+## Results
+The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 50 minutes. Training was halted due to resource constraints. Below are the training and validation losses recorded during these steps:
+
+![Train/Validation Loss](result.png)
+
 
 
 ## Notes

@@ -1,0 +1,4 @@
+dataclasses
+datasets
+transformers
+sentencepiece

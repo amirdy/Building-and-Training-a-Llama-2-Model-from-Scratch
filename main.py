@@ -5,8 +5,10 @@ from config import LlamaConfig_7B, TrainingConfig
 from trainer import Trainer
 import time
 import os 
-
-
+from torch.distributed import init_process_group, destroy_process_group
+from torch.nn.parallel import DistributedDataParallel as DDP
+import numpy as np
+import random 
 # Load the tiny stories dataset 
 def load_tiny_stories():
     tokens_train = []
@@ -29,12 +31,33 @@ def load_tiny_stories():
 
 def main():
     """ Main function to set up and train the Llama2-7B model. """
-    
+    torch.manual_seed(1337)
+    torch.cuda.manual_seed(1337)
+    np.random.seed(1337)
+    random.seed(1337)
     # Load dataset
     tokens_train, tokens_val = load_tiny_stories()
 
+
+
+    ddp = int(os.environ.get("RANK", -1)) != -1
+    if ddp:
+        init_process_group(backend ='nccl')
+        ddp_rank = int(os.environ['RANK'])
+        ddp_local_rank = int(os.environ['LOCAL_RANK'])
+        ddp_world_size = int(os.environ['WORLD_SIZE'])
+        device = f'cuda:{ddp_local_rank}'
+        torch.cuda.set_device(device)
+        master_process = ddp_rank == 0 # Only the master process will print logs and save checkpoints
+    else:
+        ddp_rank = 0
+        ddp_local_rank = 0
+        ddp_world_size = 1
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        master_process = True
+
     # Set the device
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f'Training on {device}...')
 
     # Initialize configurations
@@ -55,7 +78,10 @@ def main():
     model.to(device) # Move the model to the device
 
     # Compile the model for faster training
-    model = torch.compile(model) 
+    # model = torch.compile(model) 
+    if ddp: 
+        model = DDP(model, device_ids = [ddp_local_rank]) # Wrap the model with DDP for distributed training
+        model = model.module # Get the original model from DDP wrapper
 
     # Set the sample context
     sample_context = "Once, a cat sees a dog and says, 'Hi puppy! How's life going?' "
@@ -68,7 +94,10 @@ def main():
         model = model,
         config = training_config,
         device = device,
-        sample_context = sample_context
+        sample_context = sample_context,
+        ddp_world_size = ddp_world_size,
+        master_process = master_process,
+        ddp = ddp
     )
     print('Start training')
     # Start training

@@ -90,8 +90,8 @@ class TrainingConfig:
 ## Results
 The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 50 minutes. Training was halted due to resource constraints. Below are the training and validation losses recorded during these steps:
 
-![Train/Validation Loss](result.png)
 
+<img src="result.png" alt="Train/Validation Loss" width="400" height="300">
 
 
 ## Notes

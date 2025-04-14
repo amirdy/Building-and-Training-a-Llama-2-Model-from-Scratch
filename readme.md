@@ -1,6 +1,6 @@
-# Building and Training a Llama-2 Model from Scratch
+# Building and Training a Llama-2 Model from Scratch using Multiple GPUs
 
-This project contains all the necessary code and instructions to build, train, and use a Llama-2 model from scratch. While thie repository is based on the Llama-2 7B architecture, it has been optimized for better computational efficiency by replacing traditional multi-head attention with grouped-query attention, a technique adopted in more recent Llama versions.
+This project contains all the necessary code and instructions to build and train a Llama-2 model (see the [References](#References) section) from scratch. While thie repository is based on the 7B-parameter Llama-2 architecture, it has been optimized for better computational efficiency by replacing traditional multi-head attention with grouped-query attention, a technique adopted in more recent Llama versions.
 
 ## Setup
 
@@ -8,7 +8,7 @@ To get started with this project, follow the steps below to set up your environm
 
 ### 1. Clone the Repository
 
-First, clone the repository to your local machine:
+Clone the repository to your local machine:
 
 ```bash
 git clone https://github.com/amirdy/Building-and-Training-a-GPT-2-Model-from-Scratch.git
@@ -94,17 +94,18 @@ The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 
 <img src="result.png" alt="Train/Validation Loss" width="400" height="300">
 
 
-## Notes
+## Dataset
+ The *TinyStories* dataset (see the [References](#References) section), consisting of short and simple stories, was used for training. 
 
-- **Dataset**: The *TinyStories* dataset (see the [References](#References) section), consisting of short and simple stories, was used for training. 
+## Difference with GPT-2
+- **Tokenizer**: Llama-2 uses Google's SentencePiece tokenizer instead of OpenAI's Tiktoken.
+- **Positional Embedding**: In Llama-2, positional embeddings use RoPE (Rotary Positional Embeddings), while GPT-2 uses learned absolute positional embeddings.
+- **Attention mechanism**: In Llama-2, attention is typically Grouped Query Attention (GQA), while GPT-2 uses standard Multi-Head Attention (MHA).
+- **Normalization**: Llama-2 uses RMSNorm while GPT-2 uses LayerNorm. 
+- **Activation**: Llama 2 uses SiLU activation (Swish) in its feedforward layers, while GPT-2 uses GELU activation.
 
-- **Positional Embeddings**: In Llama 2, positional embeddings are trained from scratch like other parameters.
-- **Bias**: Llama 2 uses no bias for the final projection.
-- **Architecture**: Llama 2 is a decoder-only transformer and uses no bias for the final projection.
-- **Normalization**: In Llama 2, normalization is applied before the attention mechanism.
-- **GELU Activation**: Llama 2 uses the tanh approximation for the GELU activation function.
-- **Weight Initialization**: Proper weight initialization is crucial. For example, the embedding layers are better not initialized with a uniform distribution.
 
+Please refer to [this file](https://github.com/rasbt/LLMs-from-scratch/blob/main/ch05/07_gpt_to_llama/converting-gpt-to-llama2.ipynb) by Sebastian Raschka, as it provides a comprehensive and well-articulated explanation.
 ## Repository Structure
 
 The project has the following structure:
@@ -140,7 +141,6 @@ README.md
   - `group_query_attention.py`: Defines the Group Query Attention (GQA) mechanism.
   - `transformer_block.py`: Defines the transformer block.
 - `generate_tokens.py`: Script for generating raw token sequences from the dataset.
-- `Overview.pdf`: A document providing a high-level overview of the project and its components.
 - `config.py`: Contains the configuration classes for the model and training.
 - `trainer.py`: Contains the training loop and related functions.
 - `main.py`: Main script for training the model.
@@ -149,16 +149,14 @@ README.md
 
 This project is licensed under the MIT License.
 
-## Acknowledgements
+## Useful Resources
 
-We would like to extend our gratitude to the following resources and individuals who made this project possible:
 
 - **Sebastian Raschka**: Author of [Build a Large Language Model (From Scratch)](https://www.amazon.com/Build-Large-Language-Model-Scratch/dp/1633437167), for providing valuable insights and guidance on building large language models. Reference: Raschka, Sebastian. Build A Large Language Model (From Scratch). Manning, 2024. ISBN: 978-1633437166.
-- **Andrej Karpathy**: For his educational YouTube videos, especially [Let's reproduce GPT-2 (124M)](https://www.youtube.com/watch?v=l8pRSuU81PU&t=12025s) and [Let's build GPT: from scratch, in code, spelled out](https://www.youtube.com/watch?v=kCc8FmEb1nY), which were instrumental in understanding and implementing Llama 2.
+
 
 ## References
 
 - Touvron, Hugo, et al. "Llama: Open and Efficient Foundation Language Models." arXiv preprint arXiv:2307.09288 (2023). [Llama 2 Paper](https://arxiv.org/abs/2307.09288)
 - Eldan, Ronen, and Yuanzhi Li. "Tinystories: How small can language models be and still speak coherent english?." arXiv preprint arXiv:2305.07759 (2023).
-- Brown, Tom, et al. "Language Models are Few-Shot Learners." Advances in Neural Information Processing Systems 33 (2020). [GPT-3 Paper](https://arxiv.org/abs/2005.14165)
-- Radford, Alec, et al. "Language Models are Unsupervised Multitask Learners." OpenAI Blog (2019). [GPT-2 Paper](https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf)
+

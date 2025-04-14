@@ -19,7 +19,7 @@ class LlamaConfig_7B:
     context_length = 4096  ### See the Llama 2 paper
     emb_dim = 4096         ### See the Llama 1 paper
     n_heads = 32           ### See the Llama 1 paper
-    n_layers = 32//2       ### See the Llama 1 paper
+    n_layers = 32        ### See the Llama 1 paper
     qkv_bias = False
     num_groups = 32         ### 32 = In order to be like Multi-head Attention
     intermediate_size = 11008   ### Size of the hidden in FeedForward
@@ -47,8 +47,8 @@ class TrainingConfig:
     max_lr = 3e-4    # Llama2_7B
     min_lr = 3e-5    # Llama2_7B    (0.1 * 3e-4)
     weight_decay = 0.1   # Llama2_7B
-    batch_size = 64  # Should be 4M = 2^22 | context_length=2^12   x   batch_size=2^6   x   grad_accum_steps=2^4
-    grad_accum_steps = 16 # See the Batch Size
+    batch_size = 2  # Should be 4M = 2^22 | context_length=2^12   x   batch_size=2^6   x   grad_accum_steps=2^4
+    grad_accum_steps = 512 # See the Batch Size
     max_new_token = 100
     temperature = 1
     top_p = 0.9

@@ -77,8 +77,8 @@ class Trainer:
             loss.backward()
         
         if self.ddp:
-            loss_accum_ = torch.tensor(loss_accum, dtype=torch.float32, device=self.device) # Create a tensor to hold the loss for all processes
-            torch.distributed.all_reduce(loss_accum_, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
+            # loss_accum_ = torch.tensor(loss_accum, dtype=torch.float32, device=self.device) # Create a tensor to hold the loss for all processes
+            torch.distributed.all_reduce(loss_accum, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
         
         
         # Clip norm of gradients
@@ -117,7 +117,7 @@ class Trainer:
 
     def _log_results(self, step, train_loss, val_loss, training_time, lr):
         """ Log the training results. """
-        print(f'Device: {self.device} | Step {step}: train loss {train_loss:.4f}, val loss {val_loss:.4f} | lr: {lr:.4f} | {training_time:.2f}s ')
+        print(f'Device: {self.device} | Step {step}: train loss {train_loss.item():.4f}, val loss {val_loss.item():.4f} | lr: {lr:.4f} | {training_time:.2f}s ')
 
     def _save_checkpoint(self, step, val_loss):
         """ Save the model checkpoint if the validation loss has improved. """

@@ -97,7 +97,7 @@ The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 
 ## Dataset
  The *TinyStories* dataset (see the [References](#References) section), consisting of short and simple stories, was used for training. 
 
-## Difference with GPT-2
+## Llama-2 vs GPT-2
 - **Tokenizer**: Llama-2 uses Google's SentencePiece tokenizer instead of OpenAI's Tiktoken.
 - **Positional Embedding**: In Llama-2, positional embeddings use RoPE (Rotary Positional Embeddings), while GPT-2 uses learned absolute positional embeddings.
 - **Attention mechanism**: In Llama-2, attention is typically Grouped Query Attention (GQA), while GPT-2 uses standard Multi-Head Attention (MHA).

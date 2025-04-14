@@ -73,7 +73,7 @@ class Trainer:
             loss = self.criterion(pred, y) / self.grad_accum_steps
             loss_accum += loss.detach()
             if self.ddp:
-                self.model.require_backward_grad_sync = (i == self.grad_accum_steps) # Synchronize gradients across all processes
+                self.model.require_backward_grad_sync = (i == (self.grad_accum_steps - 1) ) # Synchronize gradients across all processes
             loss.backward()
         
         if self.ddp:
@@ -195,7 +195,7 @@ class Trainer:
         for step in range(self.config.max_steps):
             start_time = time.time()
             train_loss, lr = self._train_step(step)
-            if step % 100 == 0: # Log the results every 10 steps
+            if step % 1 == 0: # Log the results every 10 steps
                 val_loss = self._evaluate()
                 end_time = time.time()
                 training_time = (end_time - start_time)

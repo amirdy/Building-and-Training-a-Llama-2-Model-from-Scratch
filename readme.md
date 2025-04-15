@@ -87,15 +87,54 @@ class TrainingConfig:
     temperature = 1  
     top_p = 0.9   
 ```
+
+
+## Dataset
+ The *TinyStories* dataset (see the [References](#References) section), consisting of short and simple stories, was used for training. 
+
+
 ## Results
 The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 50 minutes. Training was halted due to resource constraints. Below are the training and validation losses recorded during these steps:
 
 
 <img src="result.png" alt="Train/Validation Loss" width="400" height="300">
 
+## DDP (Distributed Data Parallel) details
+In order train the model on multiple GPU, ddp was used. there are some steps to make ddp word:
+- In the main.py: 
+    ```python
+    init_process_group(backend ='nccl')
+    ddp_rank = int(os.environ['RANK'])
+    ddp_local_rank = int(os.environ['LOCAL_RANK'])
+    ddp_world_size = int(os.environ['WORLD_SIZE'])
+    device = f'cuda:{ddp_local_rank}'
+    torch.cuda.set_device(device)
+    master_process = ddp_rank == 0 # Only the master process will print logs and save checkpoints   
+    ```
+    Explanation: 
+    - rank: Global index of the current GPU.
+    - local_rank: Index of the GPU on the current node (machine).
+    - world_size: Total number of GPUs across all nodes.
+    ```python
+    model = DDP(model, device_ids = [ddp_local_rank]) # Wrap the model with DDP for distributed training
+    model = model.module # Get the original model from DDP wrapper
+    ```
+- In the trainer.py: 
+    ```python
+    if self.ddp:
+        self.model.require_backward_grad_sync = (i == (self.grad_accum_steps - 1) ) # Synchronize gradients across all processes
+    loss.backward()  
+    ```
+    Explanation: 
+    -  dd
+ 
+- In the data_module.py: 
+    ```python
+    DataLoader(self.train_dataset, shuffle = False, sampler = DistributedSampler(self.train_dataset, shuffle=True), batch_size = self.batch_size, drop_last = True, )
 
-## Dataset
- The *TinyStories* dataset (see the [References](#References) section), consisting of short and simple stories, was used for training. 
+    ```
+    Explanation: 
+    -  dd
 
 ## Llama-2 vs GPT-2
 - **Tokenizer**: Llama-2 uses Google's SentencePiece tokenizer instead of OpenAI's Tiktoken.

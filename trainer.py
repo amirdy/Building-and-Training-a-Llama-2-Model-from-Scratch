@@ -4,10 +4,11 @@ import time
 import numpy as np
 import math
 from pathlib import Path
+from torch.distributed import  destroy_process_group
 
 class Trainer:
     """ Trainer class for training and evaluating a Llama2 model. """
-    def __init__(self, tokenizer, train_dataloader, val_dataloader, model, config,  device, sample_context):
+    def __init__(self, tokenizer, train_dataloader, val_dataloader, model, config,  device, sample_context, ddp_world_size, master_process, ddp):
         self.tokenizer = tokenizer
         self.train_dataloader = train_dataloader
         self.iter_train_dataloader = iter(train_dataloader)
@@ -15,10 +16,16 @@ class Trainer:
         self.model = model
         self.config = config
         self.device = device
+        self.device_type = 'cuda' if 'cuda' in str(self.device) else 'cpu'
+
+        self.ddp_world_size = ddp_world_size
+        self.master_process = master_process
+        self.ddp = ddp
         self.sample_context = sample_context
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = self._configure_optimizer()
-        self.grad_accum_steps = config.grad_accum_steps
+        self.grad_accum_steps = config.grad_accum_steps // ddp_world_size # Adjust the gradient accumulation steps for distributed training
+        
         self.best_val_loss = float('inf')
         self.best_step = 0
         self.train_losses = []
@@ -28,11 +35,12 @@ class Trainer:
 
     def _prepare_checkpoint_dir(self):
         """ Prepare the checkpoint directory. """
-        try:
-            self.checkpoint_dir.mkdir(parents=True)
-            print(f"Checkpoint directory is ready at: {self.checkpoint_dir}...")
-        except FileExistsError:
-            print(f"The checkpoint directory ({self.checkpoint_dir}) already exists...")
+        if self.master_process:
+            try:
+                self.checkpoint_dir.mkdir(parents=True)
+                print(f"Checkpoint directory is ready at: {self.checkpoint_dir}...")
+            except FileExistsError:
+                print(f"The checkpoint directory ({self.checkpoint_dir}) already exists...")
 
     def _get_batch(self):
         """ Get a batch of data from the training dataloader. """
@@ -45,25 +53,34 @@ class Trainer:
     def _train_step(self, current_step):
         """ Perform a single training step. """
         self.model.train()
-        loss_accum = 0
+        # loss_accum = 0
+        loss_accum = torch.zeros(1, device=self.device)
+
         # Zero the gradients
         self.optimizer.zero_grad()
 
-        for _ in range(self.grad_accum_steps):
+        for i in range(self.grad_accum_steps):
             X, y = self._get_batch() # X: (batch_size, seq_length)   y: (batch_size, seq_length)
             X, y = X.to(self.device), y.to(self.device)
 
             # Forward pass
-            with torch.autocast(device_type=str(self.device), dtype=torch.bfloat16): # Use bfloat16 for faster computation
+            with torch.autocast(device_type= self.device_type, dtype=torch.bfloat16): # Use bfloat16 for faster computation
                 pred = self.model(X)     # (batch_size, seq_length, vocab_size)
             pred = pred.flatten(0,1)     # (batch_size x seq_length, vocab_size)
             y = y.flatten(0,1)           # (batch_size x seq_length)
 
             # Calculate loss
             loss = self.criterion(pred, y) / self.grad_accum_steps
-            loss_accum += loss.item()
+            loss_accum += loss.detach()
+            if self.ddp:
+                self.model.require_backward_grad_sync = (i == (self.grad_accum_steps - 1) ) # Synchronize gradients across all processes
             loss.backward()
-
+        
+        if self.ddp:
+            # loss_accum_ = torch.tensor(loss_accum, dtype=torch.float32, device=self.device) # Create a tensor to hold the loss for all processes
+            torch.distributed.all_reduce(loss_accum, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
+        
+        
         # Clip norm of gradients
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
 
@@ -87,7 +104,7 @@ class Trainer:
 
             # Forward pass
             with torch.no_grad(): # No need to track the gradients
-                with torch.autocast(device_type=str(self.device), dtype=torch.bfloat16): # Use bfloat16 for faster computation
+                with torch.autocast(device_type= self.device_type, dtype=torch.bfloat16): # Use bfloat16 for faster computation
                     pred = self.model(X) # (batch_size, seq_length, vocab_size)
             pred = pred.flatten(0,1)     # (batch_size x seq_length, vocab_size)
             y = y.flatten(0,1)           # (batch_size x seq_length)
@@ -100,15 +117,16 @@ class Trainer:
 
     def _log_results(self, step, train_loss, val_loss, training_time, lr):
         """ Log the training results. """
-        print(f'Step {step}: train loss {train_loss:.4f}, val loss {val_loss:.4f} | lr: {lr:.4f} | {training_time:.2f}s ')
+        print(f'Device: {self.device} | Step {step}: train loss {train_loss.item():.4f}, val loss {val_loss.item():.4f} | lr: {lr:.4f} | {training_time:.2f}s ')
 
     def _save_checkpoint(self, step, val_loss):
         """ Save the model checkpoint if the validation loss has improved. """
+        
         if val_loss < self.best_val_loss:
-                self.best_val_loss = val_loss
-                self.best_step = step
-                model_filename = self.checkpoint_dir / f'best_model.pth'
-                torch.save(self.model.state_dict(), model_filename)
+                    self.best_val_loss = val_loss
+                    self.best_step = step
+                    model_filename = self.checkpoint_dir / f'best_model.pth'
+                    torch.save(self.model.state_dict(), model_filename)
 
     def _print_sample_output(self):
         """ Generate and print a sample output from the model. """
@@ -177,10 +195,13 @@ class Trainer:
         for step in range(self.config.max_steps):
             start_time = time.time()
             train_loss, lr = self._train_step(step)
-            if step % 100 == 0: # Log the results every 10 steps
+            if step % 1 == 0: # Log the results every 10 steps
                 val_loss = self._evaluate()
                 end_time = time.time()
                 training_time = (end_time - start_time)
                 self._log_results(step, train_loss, val_loss, training_time, lr)
-                self._save_checkpoint(step, val_loss)
-                self._print_sample_output()
+                if self.master_process: 
+                    self._save_checkpoint(step, val_loss)
+                    self._print_sample_output()
+        if self.ddp:
+            destroy_process_group() # Destroy the process group for distributed training

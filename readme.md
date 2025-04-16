@@ -127,8 +127,7 @@ To train the model using multiple GPUs, I used Distributed Data Parallel (DDP). 
     ```
     Explanation: 
     -  The second line controls when DDP should synchronize gradients across GPUs. 
-    - In Distributed Data Parallel (DDP), each GPU works on its own slice of data. After backpropagation (loss.backward()), DDP automatically synchronizes gradients between all GPUs so they stay in sync for the optimizer step. But if you're using gradient accumulation, you’re calling loss.backward() multiple times before calling optimizer.step().
-    The problem is if DDP syncs gradients every time you call .backward(), the gradients across each process (GPU) will be averaged prematurely, even before you're ready to apply the accumulated gradients.To solve this issue, the second line is needed! It tells DDP:“Only sync gradients on the last accumulation step (i == grad_accum_steps - 1).” By using that line, you're ensuring that gradients are only synchronized at the correct moment — after the full set of accumulation steps — leading to accurate and stable training results.
+    - require_backward_grad_sync is a PyTorch DDP flag that controls whether gradients should be synchronized across GPUs. The code block helps to avoid unnecessary gradient synchronization steps during accumulation (only sync on the last accumulation step).
 
     ```python
     if self.ddp:
@@ -209,6 +208,7 @@ This project is licensed under the MIT License.
 
 - **Umar Jamil**: **[Distributed Training with PyTorch: complete tutorial with cloud infrastructure and code](https://www.youtube.com/watch?v=toUSzwR0EV8)**
 
+- **Andrej Karpathy**: **[Let's reproduce GPT-2 (124M)](https://www.youtube.com/watch?v=l8pRSuU81PU&t=10012s)** (DDP explanation)
 
 ## References
 

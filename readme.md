@@ -100,8 +100,8 @@ The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 
 <img src="result.png" alt="Train/Validation Loss" width="400" height="300">
 
 ## DDP (Distributed Data Parallel) details
-In order train the model on multiple GPU, ddp was used. there are some steps to make ddp word:
-- In the main.py: 
+To train the model using multiple GPUs, we used Distributed Data Parallel (DDP). TThe important parts for implementing DDP are outlined below:
+- In the **main.py**: 
     ```python
     init_process_group(backend ='nccl')
     ddp_rank = int(os.environ['RANK'])
@@ -119,22 +119,33 @@ In order train the model on multiple GPU, ddp was used. there are some steps to 
     model = DDP(model, device_ids = [ddp_local_rank]) # Wrap the model with DDP for distributed training
     model = model.module # Get the original model from DDP wrapper
     ```
-- In the trainer.py: 
+- In the **trainer.py**: 
     ```python
     if self.ddp:
         self.model.require_backward_grad_sync = (i == (self.grad_accum_steps - 1) ) # Synchronize gradients across all processes
     loss.backward()  
     ```
     Explanation: 
-    -  dd
- 
-- In the data_module.py: 
+    -  The second line controls when DDP should synchronize gradients across GPUs. 
+    - In Distributed Data Parallel (DDP), each GPU works on its own slice of data. After backpropagation (loss.backward()), DDP automatically synchronizes gradients between all GPUs so they stay in sync for the optimizer step. But if you're using gradient accumulation, you’re calling loss.backward() multiple times before calling optimizer.step().
+    The problem is if DDP syncs gradients every time you call .backward(), the gradients across each process (GPU) will be averaged prematurely, even before you're ready to apply the accumulated gradients.To solve this issue, the second line is needed! It tells DDP:“Only sync gradients on the last accumulation step (i == grad_accum_steps - 1).” By using that line, you're ensuring that gradients are only synchronized at the correct moment — after the full set of accumulation steps — leading to accurate and stable training results.
+
     ```python
-    DataLoader(self.train_dataset, shuffle = False, sampler = DistributedSampler(self.train_dataset, shuffle=True), batch_size = self.batch_size, drop_last = True, )
+    if self.ddp:
+            torch.distributed.all_reduce(loss_accum, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
+    ```
+    Explanation:
+    - ws
+
+
+ 
+- In the **data_module.py**: 
+    ```python
+    DataLoader(self.train_dataset, shuffle = False, sampler = DistributedSampler(self.train_dataset, shuffle=True), batch_size = self.batch_size, drop_last = True)
 
     ```
     Explanation: 
-    -  dd
+    -  This is crucial for DDP. The DistributedSampler ensures that each process (or GPU) gets a distinct subset of the data.
 
 ## Llama-2 vs GPT-2
 - **Tokenizer**: Llama-2 uses Google's SentencePiece tokenizer instead of OpenAI's Tiktoken.
@@ -165,7 +176,6 @@ config.py
 trainer.py
 main.py
 generate_tokens.py
-Overview.pdf
 README.md
 ```
 

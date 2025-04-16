@@ -24,9 +24,9 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 pip install -r requirements.txt
 ```
 
-### 3. Train the Model with multiple GPUs
+### 3. Train the Model using multiple GPUs
 
-To train the model from scratch, use the provided `main.py` script. This script sets up the data, model, and training loop:
+To train the model from scratch utilizing  multiple GPUs, use the provided `main.py` script. This script sets up the data, model, and training loop:
 
 ```bash
 torchrun --standalone --nproc-per-node=2 main.py
@@ -100,7 +100,7 @@ The model was trained on 2×H200 SXM GPUs for 6 steps, which took approximately 
 <img src="result.png" alt="Train/Validation Loss" width="400" height="300">
 
 ## DDP (Distributed Data Parallel) details
-To train the model using multiple GPUs, we used Distributed Data Parallel (DDP). TThe important parts for implementing DDP are outlined below:
+To train the model using multiple GPUs, I used Distributed Data Parallel (DDP). The important parts for implementing DDP are outlined below:
 - In the **main.py**: 
     ```python
     init_process_group(backend ='nccl')
@@ -135,7 +135,9 @@ To train the model using multiple GPUs, we used Distributed Data Parallel (DDP).
             torch.distributed.all_reduce(loss_accum, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
     ```
     Explanation:
-    - ws
+    - In DDP, each GPU processes a different mini-batch. So each GPU computes its own local loss. If you want a globally averaged loss (e.g. for logging or consistency), you need to average the loss across all GPUs.
+
+
 
 
  
@@ -145,7 +147,7 @@ To train the model using multiple GPUs, we used Distributed Data Parallel (DDP).
 
     ```
     Explanation: 
-    -  This is crucial for DDP. The DistributedSampler ensures that each process (or GPU) gets a distinct subset of the data.
+    -  This is crucial for DDP. The DistributedSampler ensures that each GPU gets a distinct subset of the data.
 
 ## Llama-2 vs GPT-2
 - **Tokenizer**: Llama-2 uses Google's SentencePiece tokenizer instead of OpenAI's Tiktoken.
@@ -186,7 +188,7 @@ README.md
   - `feed_forward.py`: Defines the feed-forward network.
   - `silu.py`: Defines the SiLU activation function.
   - `llama.py`: Defines the Llama model.
-  - `layer_norm.py`: Defines the layer normalization.
+  - `layer_norm.py`: Defines the RMS normalization.
   - `group_query_attention.py`: Defines the Group Query Attention (GQA) mechanism.
   - `transformer_block.py`: Defines the transformer block.
 - `generate_tokens.py`: Script for generating raw token sequences from the dataset.
@@ -202,6 +204,10 @@ This project is licensed under the MIT License.
 
 
 - **Sebastian Raschka**: Author of [Build a Large Language Model (From Scratch)](https://www.amazon.com/Build-Large-Language-Model-Scratch/dp/1633437167), for providing valuable insights and guidance on building large language models. Reference: Raschka, Sebastian. Build A Large Language Model (From Scratch). Manning, 2024. ISBN: 978-1633437166.
+
+- **PyTorch**: **[Distributed Data Parallel (DDP) in PyTorch Tutorial Series](https://www.youtube.com/watch?v=-K3bZYHYHEA&list=PL_lsbAsL_o2CSuhUhJIiW0IkdT5C2wGWj)**
+
+- **Umar Jamil**: **[Distributed Training with PyTorch: complete tutorial with cloud infrastructure and code](https://www.youtube.com/watch?v=toUSzwR0EV8)**
 
 
 ## References

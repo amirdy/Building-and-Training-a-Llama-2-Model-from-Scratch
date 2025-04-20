@@ -19,9 +19,9 @@ class LlamaConfig_7B:
     context_length = 4096  ### See the Llama 2 paper
     emb_dim = 4096         ### See the Llama 1 paper
     n_heads = 32           ### See the Llama 1 paper
-    n_layers = 32        ### See the Llama 1 paper
+    n_layers = 32          ### See the Llama 1 paper
     qkv_bias = False
-    num_groups = 8         ### 32 = In order to be like Multi-head Attention
+    num_groups = 8         
     intermediate_size = 11008   ### Size of the hidden in FeedForward
 
 

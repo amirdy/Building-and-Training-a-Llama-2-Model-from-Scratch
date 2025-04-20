@@ -119,6 +119,9 @@ To train the model using multiple GPUs, I used Distributed Data Parallel (DDP). 
     model = DDP(model, device_ids = [ddp_local_rank]) # Wrap the model with DDP for distributed training
     model = model.module # Get the original model from DDP wrapper
     ```
+    ```python
+    self.grad_accum_steps = config.grad_accum_steps // ddp_world_size # Adjust the gradient accumulation steps for distributed training
+    ```
 - In the **trainer.py**: 
     ```python
     if self.ddp:

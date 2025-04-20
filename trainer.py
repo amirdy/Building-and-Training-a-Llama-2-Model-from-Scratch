@@ -77,7 +77,6 @@ class Trainer:
             loss.backward()
         
         if self.ddp:
-            # loss_accum_ = torch.tensor(loss_accum, dtype=torch.float32, device=self.device) # Create a tensor to hold the loss for all processes
             torch.distributed.all_reduce(loss_accum, op=torch.distributed.ReduceOp.AVG) # Average the loss across all processes
         
         

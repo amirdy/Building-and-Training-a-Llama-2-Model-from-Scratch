@@ -5,7 +5,7 @@ from config import LlamaConfig_7B, TrainingConfig
 from trainer import Trainer
 import time
 import os 
-from torch.distributed import init_process_group, destroy_process_group
+from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel as DDP
 import numpy as np
 import random 
